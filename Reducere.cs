@@ -18,9 +18,9 @@ public class Reducere{
         this.Data = data;
 
     }
-    public void ApplyDiscount(Produs produs) //to execute the delegate on a Produs object
-    {
-        _aplica(produs);
-    }
+    // public void ApplyDiscount(Produs produs) //to execute the delegate on a Produs object
+    // {
+    //     _aplica(produs); ex 6
+    // }
 
 }

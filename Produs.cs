@@ -6,19 +6,37 @@ namespace Produsclass;
 
 public class Produs
 {
-private Guid id = Guid.NewGuid();
+private Guid Id = Guid.NewGuid();
 public string Name;
 public Pret Pret;
-
-//Stoc: intreg > 0
+private int _stoc;
 
 public Producator Producator;
 
+public int Stoc{
+    get
+    {
+        return _stoc;
+    }
+    set
+    {
+    if (value > 0)
+    {
+        _stoc = value;
+    }
+    else{
+        throw new ArgumentOutOfRangeException(nameof(Stoc), "Stoc must be greater thatn 0.");
+    }
+    }
+}
+
 public Produs(string name, Producator producator, Pret pret)
 {
+    //Id = id;
     this.Name = name;
     Pret = pret;
     Producator = producator;
+    //Stoc = stoc;
 }
 
 }

@@ -5,7 +5,7 @@ namespace Pretclass;
 public class Pret 
 {
 
-static IDictionary<Monede, decimal> Curs = new Dictionary<Monede, decimal>(){
+public static IDictionary<Monede, decimal> Curs = new Dictionary<Monede, decimal>(){
     };
     public enum Monede
     {
@@ -13,11 +13,13 @@ static IDictionary<Monede, decimal> Curs = new Dictionary<Monede, decimal>(){
     }
     public Monede Moneda;
     public decimal Valoare;
+    public delegate decimal Deleg_UpdatePret();
+    public event Deleg_UpdatePret User_UpdatePret;
 
-    public Pret()
+    public Pret(decimal valoare, Monede moneda)
     {
-
-    
+        Valoare = valoare;
+        Moneda = moneda;
     }
 
     public decimal ValoareCurs(Monede Moneda)
@@ -25,5 +27,9 @@ static IDictionary<Monede, decimal> Curs = new Dictionary<Monede, decimal>(){
         return Curs[Moneda];
     }
     
+    public decimal OnUser_UpdatePret()
+    {
+    return 0.2m;
+    }
     
 }

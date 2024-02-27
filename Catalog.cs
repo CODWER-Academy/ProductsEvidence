@@ -1,3 +1,4 @@
+using Producatorclass;
 using Produsclass;
 using Reducereclass;
 
@@ -8,14 +9,17 @@ public class Catalog
     public List<Produs> Produse;
     public DateTime PerioadaStart;
     public DateTime PerioadaStop;
-    public Reducere Reducere;
     public List<Reducere> Reduceri;
+    public List<Producator> Producatori; //pentru ex 1b
     
-
-    public Catalog()
+//In pofida la conditia initiala despre declararea clasei Catalog,
+// sunt nevoia sa mai adaug Producator ca sa indeplinesc conditia 1b
+    public Catalog(DateTime perioadaStart, DateTime perioadaStop, List<Producator> producatori, List<Produs> produse)
     {
-        Produse = new List<Produs>();
-        Reduceri = new List<Reducere>();
+        Produse = produse;
+        PerioadaStart = perioadaStart;
+        PerioadaStop = perioadaStop;
+        Producatori = producatori;
     }
 
 }
