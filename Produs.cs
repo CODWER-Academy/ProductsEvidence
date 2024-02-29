@@ -1,5 +1,5 @@
 using Catalogclass;
-using Microsoft.Win32.SafeHandles;
+
 using Pretclass;
 using Producatorclass;
 
@@ -41,19 +41,15 @@ public event StockChangeHandler StockChanged;
     }
 }
 
-
 public Produs(string name, Producator producator, Pret pret)
 {
-    //Id = id; 
-//proprietatea ProduseFavorite trebuie sa contina id-uri care se pot regasi in catalog sau nu)
+//proprietatea ProduseFavorite trebuie sa contina id-uri care se pot regasi in catalog sau nu
     this.Name = name;
     Pret = pret;
     Producator = producator;
-    //Stoc = stoc;
 }
 
 public int GetStocAnterior(){
     return _stocAnterior;
-
 }
 }

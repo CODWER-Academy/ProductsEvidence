@@ -16,15 +16,12 @@ public class Catalog
     public List<Producator> Producatori; //pentru ex 1b
 //In pofida la conditia initiala despre declararea clasei Catalog,
 // sunt nevoia sa mai adaug Producator ca sa indeplinesc conditia 1b
-    //public bool IsSubscribed;
-   private Dictionary<Produs, Dictionary<Client, Pret.Update_Pret>> subscribedClientsHandlers;
+   private Dictionary<Produs, Dictionary<Client, Pret.Update_Pret>> subscribedClientsHandlers;//dictionar pentru a tine cont de produsele care isi schimba pretul
 
     public delegate void delegatReducere(Produs produs);
-    public delegatReducere selectedDiscount = (produs) =>
+    public delegatReducere selectedDiscount = (produs) => //pentru a creea o reducere specifica la anumite produse
     {
-        //maybe we can add here a category of product to make different discount for them
-     produs.Pret.Valoare -= produs.Pret.Valoare * 0.10m;
-
+     produs.Pret.Valoare -= produs.Pret.Valoare * 0.50m;
     };
     public delegatReducere delegatReducereInstance;
     public Catalog(DateTime perioadaStart, DateTime perioadaStop, List<Producator> producatori, List<Produs> produse)
@@ -41,24 +38,26 @@ public class Catalog
 
     }
 
-   public void SubcsribeToUpdatePret(Client client)
+public void SubcsribeToUpdatePret(Client client) //metoda publica prin care clientii se pot abona la respectiv-ul catalog
 {
     Console.WriteLine($"Subscribing {client.Email} to updates...");
+    
     foreach (var produs in Produse)
     {
-        if (!subscribedClientsHandlers.TryGetValue(produs, out var clientHandlers))
+        // Check if the client is already subscribed to updates for this product
+        if (subscribedClientsHandlers.TryGetValue(produs, out var clientHandlers) && clientHandlers.ContainsKey(client))
+        {
+            // If already subscribed, skip to the next product
+            continue;
+        }
+
+        if (!subscribedClientsHandlers.TryGetValue(produs, out clientHandlers))
         {
             clientHandlers = new Dictionary<Client, Pret.Update_Pret>();
             subscribedClientsHandlers[produs] = clientHandlers;
         }
 
-        // Check if the client is already subscribed to updates for this product
-        if (clientHandlers.TryGetValue(client, out Pret.Update_Pret existingHandler))
-        {
-            // If already subscribed, unsubscribe first to prevent duplicate notifications
-            produs.Pret.OnUpdate_Pret -= existingHandler;
-        }
-
+        // Create the update handler
         Pret.Update_Pret handler = (oldPret, newPret) =>
         {
             if (client.ProduseFavorite.Contains(produs.Id))
@@ -72,65 +71,65 @@ public class Catalog
 
         // Subscribe to the event
         produs.Pret.OnUpdate_Pret += handler;
-
         // Update the handler reference in the dictionary
         clientHandlers[client] = handler;
     }
+}
 
-    }
 
 public void AplicaReduceriProducator(delegatReducere delegatSpecific = null)
+//itereaza prin lista de produse si pentru fiecare produs aplica toate reducerile
+//producatorului care se incadreaza in perioada catalogului
 {
     foreach (var produs in Produse)
     {
         if (delegatSpecific != null)
         {
-            // Apply the specific discount using the delegate.
+            //Apply the specific discount using the delegate
             delegatSpecific(produs);
         }
         else
         {
-            // No specific delegate provided, apply all discounts that are within the catalog period.
+            //No specific delegate provided, apply all discounts that are within the catalog period
             foreach (var reducere in produs.Producator.Reduceri)
             {
                 if (reducere.StartData.IsInRange(this.PerioadaStart, this.PerioadaStop))
                 {
-                    // Apply the discount to the product.
-                    reducere.ApplyDiscount(produs);
+                    //Aplica discountul pentru produse
+                    reducere.AplicaReducere(produs);
                 }
             }
         }
 
-        // After applying discounts, check and update stock if conditions are met.
+        // pentru produsele cu stoc-ul 0 si pretul redus sub 10 euro stocul va fi incrementat cu 100 de bucati
         decimal pretInEuro = Pret.GetCurrencyRate(produs.Pret.Moneda) * produs.Pret.Valoare;
         if (produs.Stoc == 0 && pretInEuro < 10)
         {
-            produs.Stoc += 100; // Increment stock by 100 units.
+            produs.Stoc += 100; 
         }
     }
 }
 
-
     public void AplicaReduceri(delegatReducere delegatGeneric = null)
+    //metoda care primeste optional un delegat generic ce permite selectarea unei reduceri 
+    //din cele disponibile in catalog
 {
     if (delegatGeneric != null)
     {
         foreach(var produs in Produse)
         {
             delegatGeneric(produs);
-
-            // This check should be inside the foreach loop
+            // pentru produsele cu stoc-ul 0 si pretul redus sub 10 euro stocul va fi incrementat cu 100 de bucati
             decimal pretInEuro = Pret.GetCurrencyRate(produs.Pret.Moneda) * produs.Pret.Valoare;
             if (produs.Stoc == 0 && pretInEuro < 10)
             {
-                produs.Stoc += 100; // Increment stock by 100 units.
+                produs.Stoc += 100;
             }
         }
     }
     else
     {
-        // Make sure to correct the method name if there's a typo
-        AplicaReduceriProducator(); // This method should handle the stock check internally
+        AplicaReduceriProducator(); //this method should handle the stock check internally
     }
 }
 
@@ -138,7 +137,9 @@ public void AplicaReduceriProducator(delegatReducere delegatSpecific = null)
         delegatReducereInstance = newDelegatReducere;
     }
 
-    public void UnsubscribeToUpdatePret(Client client)
+    public void UnsubscribeToUpdatePret(Client client)  
+    //o metoda publica prin care clientii se pot dezabona de la respectivul catalog (in cazul in
+//care un client se dezaboneaza si nu se regaseste in lista de abonati, o exceptie trebuie aruncata)
 {
     bool isSubscribed = false;
     foreach (var pair in subscribedClientsHandlers)
@@ -165,24 +166,25 @@ public void AplicaReduceriProducator(delegatReducere delegatSpecific = null)
     NotificaModificariStoc(produsModificat);
 }
 
-   public void AddProdus(Produs produs)
+ public void AddProdus(Produs produs)
 {
-    produs.StockChanged -= HandleStockChanged; // Unsubscribe first to prevent multiple subscriptions
-    produs.StockChanged += HandleStockChanged;
+    produs.StockChanged -= HandleStockChanged; //Unsubscribe first to prevent multiple subscriptions
+    produs.StockChanged += HandleStockChanged; //csubscribe to the event
     Produse.Add(produs);
-    // Initialize the client handlers dictionary for this product if it doesn't exist.
     if (!subscribedClientsHandlers.ContainsKey(produs))
     {
         subscribedClientsHandlers[produs] = new Dictionary<Client, Pret.Update_Pret>();
     }
-    produs.StockChanged += HandleStockChanged; //subscribe users to the stock change event
 }
+
     private void HandleStockChanged(Produs produs)
     {
         NotificaModificariStoc(produs);
     }
 
-    private void NotificaModificariStoc(Produs produsModificat){
+
+    private void NotificaModificariStoc(Produs produsModificat){ //metoda privata care incapsuleaza logica pentru notifcicarea clientilor
+    //despre schimbarile de stoc
     // Check if the stock was 0 before and now is greater than 0
     if (produsModificat.GetStocAnterior() == 0 && produsModificat.Stoc > 0)
     {
@@ -201,7 +203,7 @@ public void AplicaReduceriProducator(delegatReducere delegatSpecific = null)
         }
     }
 }
- public void SetDelegatReducere(delegatReducere newDelegatReducere)
+ public void SetDelegatReducere(delegatReducere newDelegatReducere) //metoda pentru a aplica discountul la cazuri specifice
     {
         delegatReducereInstance = newDelegatReducere;
     }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Concurrent;
-using System.Configuration.Assemblies;
+﻿
 using Catalogclass;
 using Clientclass;
 using Pretclass;
@@ -7,29 +6,31 @@ using Producatorclass;
 using Produsclass;
 using Reducereclass;
 using ExtensionMethdDemo;
-using System.ComponentModel.Design;
+
 
 public class Program
 {
     public static void Main()
     {
-        Pret.InitializeCurrencies();
+        Pret.InitializeCurrencies(); //am initializat methoda care va efectua conversiile valutare
         
         List<Producator> producatori = new List<Producator>();
 
-        Producator clothesProd = new Producator("Clothes_prod", new List<Reducere> {
-                new Reducere("Summer Sale", new DateTime(2024, 03, 06), new DateTime(2024, 03, 07), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.10m),//maybe the discount logic will be hidden in the reducere class?
-                new Reducere("Winter Sale", new DateTime(2024, 12, 01), new DateTime(2024, 01, 20), Produs =>Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.20m)
-                });
-        
-        Producator shoesProd = new Producator("Shoes_prod", new List<Reducere> {
-                new Reducere("Easter Sale", new DateTime(2024, 04, 20), new DateTime(2024, 05, 11), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.15m)
-                });
-        Producator jeweleryProd = new Producator("Jewelery_prod", new List<Reducere>{
-                new Reducere("Eight March", new DateTime(2024, 03, 06), new DateTime(2024, 03, 10), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.10m)  
-        });
+Producator clothesProd = new Producator("Clothes_prod", new List<Reducere> {
+        new Reducere("Summer Sale", new DateTime(2024, 03, 06), new DateTime(2024, 03, 07), Reducere.SummerSaleDiscount),
+        new Reducere("Winter Sale", new DateTime(2024, 12, 01), new DateTime(2024, 01, 20), Reducere.WinterSaleDiscount)
+});
+
+Producator shoesProd = new Producator("Shoes_prod", new List<Reducere> {
+        new Reducere("Easter Sale", new DateTime(2024, 04, 20), new DateTime(2024, 05, 11), Reducere.EasterSaleDiscount)
+});
+
+Producator jeweleryProd = new Producator("Jewelery_prod", new List<Reducere> {
+        new Reducere("Eight March", new DateTime(2024, 03, 06), new DateTime(2024, 03, 10), Reducere.EightMarchDiscount)
+});
 
 
+//adaugam producatorii in lista de producatori
         producatori.Add(clothesProd);
         producatori.Add(shoesProd);
         producatori.Add(jeweleryProd);
@@ -45,70 +46,52 @@ public class Program
         //tricou NOT in catalog si nu e in stoc
         Produs tricou = new Produs("Tricou", clothesProd, new Pret(5, Pret.Monede.EUR));
         tricou.Stoc = 0;
-        
+
+//adaugam produsele in lista de produse
         produse.Add(ciorapi);
         produse.Add(botine);
         produse.Add(cercei);       
 
         cercei.Pret.Valoare = 300; 
-        
+        ciorapi.Stoc = 20;
         ///////////////////
         List<Client> clienti = new List<Client>();
 
-        Client client1 = new Client(new List<Guid> {tricou.Id, ciorapi.Id} );
-        Client client2 = new Client(new List<Guid> {cercei.Id, ciorapi.Id} );
-        Client client3 = new Client(new List<Guid> {tricou.Id, botine.Id, cercei.Id} );
+        Client client1 = new Client("alexandrin@gmail.com", new List<Guid> {tricou.Id, ciorapi.Id} );
+        Client client2 = new Client("adriana143@isa.utm.org", new List<Guid> {cercei.Id, ciorapi.Id} );
+        Client client3 = new Client("eugeniu12!@gmail.com", new List<Guid> {tricou.Id, botine.Id, cercei.Id} );
 
         clienti.Add(client1);
         clienti.Add(client2);
         clienti.Add(client3);
 
-       //////////////////////
+       //////////////////////Creem catalog cu producatori si cu produse
         Catalog catalog = new Catalog(new DateTime(2024, 3, 04), new DateTime(2024, 04, 19), producatori, new List<Produs>());
+        
         foreach (var produs in produse)
         {
                 catalog.AddProdus(produs);
         }
-
-
         foreach (var client in clienti)
         {
         client.ClearInbox();
         }
-
+//abonam 3 clienti la catalog
         catalog.SubcsribeToUpdatePret(client1);
         catalog.SubcsribeToUpdatePret(client2);
         catalog.SubcsribeToUpdatePret(client3);
 
-/////ex 7
-catalog.SetDelegatreducere(catalog.selectedDiscount);
 
-        // Conditional compilation directive for DEBUG mode
+/////ex 7
         #if DEBUG
-        // In DEBUG mode, use the selected discount
         catalog.AplicaReduceri(catalog.delegatReducereInstance);
         #else
-        // In RELEASE mode, apply all discounts
-        catalog.AplicaReduceri();
+        catalog.AplicaReduceri(); //For realise mode
         #endif
 
-    /////////////////////start testing the discount applying
- Console.WriteLine("Before applying discounts:");
-    foreach (var produs in produse)
-    {
-        Console.WriteLine($"Product: {produs.Name}, Price: {produs.Pret.Valoare}, Stock: {produs.Stoc}");
-    }
-catalog.AplicaReduceriProducator();
-
-    // After applying discounts
-    Console.WriteLine("\nAfter applying discounts:");
-    foreach (var produs in produse)
-    {
-        Console.WriteLine($"Product: {produs.Name}, Price: {produs.Pret.Valoare}, Stock: {produs.Stoc}");
-    }
 
     // Check if discounts were applied correctly and stock was incremented
-    bool areDiscountsCorrect = true; // Assume true until proven otherwise
+    bool areDiscountsCorrect = true;
     foreach (var produs in produse)
     {
         decimal pretInEuro = Pret.GetCurrencyRate(produs.Pret.Moneda) * produs.Pret.Valoare;
@@ -127,8 +110,8 @@ catalog.AplicaReduceriProducator();
     {
         Console.WriteLine("There were errors in applying discounts.");
     }
-    /////ex 8 start//////
-    
+    /////ex 8 //////
+        Client.DisplayClientInformation(clienti, produse);
 
     Console.WriteLine("Press any key to exit...");
     Console.ReadKey();
