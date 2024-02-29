@@ -6,27 +6,27 @@ using Pretclass;
 using Producatorclass;
 using Produsclass;
 using Reducereclass;
+using ExtensionMethdDemo;
+using System.ComponentModel.Design;
 
 public class Program
 {
     public static void Main()
     {
-        List<Produs> produse = new List<Produs>
-        {
-    
-        };
+        Pret.InitializeCurrencies();
+        
         List<Producator> producatori = new List<Producator>();
 
         Producator clothesProd = new Producator("Clothes_prod", new List<Reducere> {
-                new Reducere("Summer Sale", new DateTime(2024, 06, 01), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.10m),//maybe the discount logic will be hidden in the reducere class?
-                new Reducere("Winter Sale", new DateTime(2024, 12, 01), Produs =>Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.20m)
+                new Reducere("Summer Sale", new DateTime(2024, 03, 06), new DateTime(2024, 03, 07), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.10m),//maybe the discount logic will be hidden in the reducere class?
+                new Reducere("Winter Sale", new DateTime(2024, 12, 01), new DateTime(2024, 01, 20), Produs =>Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.20m)
                 });
         
         Producator shoesProd = new Producator("Shoes_prod", new List<Reducere> {
-                new Reducere("Easter Sale", new DateTime(2024, 05, 20), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.15m)
+                new Reducere("Easter Sale", new DateTime(2024, 04, 20), new DateTime(2024, 05, 11), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.15m)
                 });
         Producator jeweleryProd = new Producator("Jewelery_prod", new List<Reducere>{
-                new Reducere("Eight March", new DateTime(2024, 03, 08), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.10m)  
+                new Reducere("Eight March", new DateTime(2024, 03, 06), new DateTime(2024, 03, 10), Produs => Produs.Pret.Valoare -= Produs.Pret.Valoare * 0.10m)  
         });
 
 
@@ -34,33 +34,106 @@ public class Program
         producatori.Add(shoesProd);
         producatori.Add(jeweleryProd);
 
-        Produs ciorapi = new Produs("Ciorapi", clothesProd, new Pret(30, Pret.Monede.LEU));
-        Produs tricou = new Produs("Tricou", clothesProd, new Pret(20, Pret.Monede.EUR));
-        Produs botine = new Produs("Botine", shoesProd, new Pret(120, Pret.Monede.USD));
-        Produs cercei = new Produs("Cercei", jeweleryProd, new Pret(300, Pret.Monede.EUR));
+        ////////////////////
+        List<Produs> produse = new List<Produs>();
+        Produs ciorapi = new Produs("Ciorapi", clothesProd, new Pret(10, Pret.Monede.LEU));
+        ciorapi.Stoc = 0;
+        Produs botine = new Produs("Botine", shoesProd, new Pret(130, Pret.Monede.USD));
+        botine.Stoc = 20;
+        Produs cercei = new Produs("Cercei", jeweleryProd, new Pret(400, Pret.Monede.EUR));
+        cercei.Stoc = 10;
+        //tricou NOT in catalog si nu e in stoc
+        Produs tricou = new Produs("Tricou", clothesProd, new Pret(5, Pret.Monede.EUR));
+        tricou.Stoc = 0;
+        
+        produse.Add(ciorapi);
+        produse.Add(botine);
+        produse.Add(cercei);       
 
-       
-        Catalog catalog = new Catalog(new DateTime(2024, 02, 25), new DateTime(2024, 03, 10), producatori, produse);
+        cercei.Pret.Valoare = 300; 
+        
+        ///////////////////
+        List<Client> clienti = new List<Client>();
 
-        Pret.Curs[Pret.Monede.LEU] = 1;
-        Pret.Curs[Pret.Monede.EUR] = 19.47m;
-        Pret.Curs[Pret.Monede.USD] = 17.30m; //curs is instantiated, but it isnt able to make conversions
+        Client client1 = new Client(new List<Guid> {tricou.Id, ciorapi.Id} );
+        Client client2 = new Client(new List<Guid> {cercei.Id, ciorapi.Id} );
+        Client client3 = new Client(new List<Guid> {tricou.Id, botine.Id, cercei.Id} );
 
+        clienti.Add(client1);
+        clienti.Add(client2);
+        clienti.Add(client3);
+
+       //////////////////////
+        Catalog catalog = new Catalog(new DateTime(2024, 3, 04), new DateTime(2024, 04, 19), producatori, new List<Produs>());
+        foreach (var produs in produse)
+        {
+                catalog.AddProdus(produs);
+        }
+
+
+        foreach (var client in clienti)
+        {
+        client.ClearInbox();
+        }
+
+        catalog.SubcsribeToUpdatePret(client1);
+        catalog.SubcsribeToUpdatePret(client2);
+        catalog.SubcsribeToUpdatePret(client3);
+
+/////ex 7
+catalog.SetDelegatreducere(catalog.selectedDiscount);
+
+        // Conditional compilation directive for DEBUG mode
+        #if DEBUG
+        // In DEBUG mode, use the selected discount
+        catalog.AplicaReduceri(catalog.delegatReducereInstance);
+        #else
+        // In RELEASE mode, apply all discounts
+        catalog.AplicaReduceri();
+        #endif
+
+    /////////////////////start testing the discount applying
+ Console.WriteLine("Before applying discounts:");
+    foreach (var produs in produse)
+    {
+        Console.WriteLine($"Product: {produs.Name}, Price: {produs.Pret.Valoare}, Stock: {produs.Stoc}");
     }
+catalog.AplicaReduceriProducator();
+
+    // After applying discounts
+    Console.WriteLine("\nAfter applying discounts:");
+    foreach (var produs in produse)
+    {
+        Console.WriteLine($"Product: {produs.Name}, Price: {produs.Pret.Valoare}, Stock: {produs.Stoc}");
+    }
+
+    // Check if discounts were applied correctly and stock was incremented
+    bool areDiscountsCorrect = true; // Assume true until proven otherwise
+    foreach (var produs in produse)
+    {
+        decimal pretInEuro = Pret.GetCurrencyRate(produs.Pret.Moneda) * produs.Pret.Valoare;
+        if (pretInEuro < 10 && produs.Stoc != 100)
+        {
+            Console.WriteLine($"Error: Stock for {produs.Name} was not incremented correctly.");
+            areDiscountsCorrect = false;
+        }
+    }
+
+    if (areDiscountsCorrect)
+    {
+        Console.WriteLine("All discounts were applied correctly.");
+    }
+    else
+    {
+        Console.WriteLine("There were errors in applying discounts.");
+    }
+    /////ex 8 start//////
+    
+
+    Console.WriteLine("Press any key to exit...");
+    Console.ReadKey();
+}
 }
 
 
-//Rezolvand exercitiul 1, am inteles ca field Producator este adaugat la PRODUS, 
-//insa dupa mine ar fi mai bine ca producatorul sa aiba field PRODUS.
-//Primul argument ar fi: clasa Catalog e lista de tip produs, pe cand in ex1 b trebuie sa 
-//instantiem un catalog REFOLOSIND PRODUCATORII DIN LISTA, respectiv nu se va pastra legatura 
-//dintre producator si produs, deaorece ea nicaieri nu este specificata? Producatorii si
-// produsele oare nu trebuie sa fie legate? Da, noi avem field producator in classa produs,
-// dar o pereche de ciorapi nu pot fi produse de 5 companii, pe cand 5 companii pot sa produca
-// cate o pereche de ciorapi. In plus, la ex 1 d, trebuie sa instantiem o lista de clienti 
-//(proprietatea ProduseFavorite trebuie sa contina id-uri care se pot regasi in catalog sau nu). 
-//In cazul in care producatorii NU contin produse, de unde sa luam ProduseFavorie si id-urile pentru ex1d ?
 
-
-//Propun sa instantiez catalog cu produse si tot acolo bagam producatorii (vedem ce va fi),
-//iar la FavProd, luam pur si simplu productul cu id-ul lui din catalog.
